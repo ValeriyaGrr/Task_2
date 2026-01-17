@@ -1,6 +1,7 @@
 package test;
 
 import client.UserClient;
+import com.github.javafaker.Faker;
 import io.restassured.response.Response;
 import model.User;
 import org.apache.http.HttpStatus;
@@ -11,36 +12,48 @@ import static org.hamcrest.Matchers.equalTo;
 public class CreateUserTest {
 
     private final UserClient userClient = new UserClient();
+    private final Faker faker = new Faker();
 
-    private User randomUser() {
+
+    private User generateUser() {
         return new User(
-                "test" + System.currentTimeMillis() + "@mail.ru",
-                "123456",
-                "TestUser"
+                faker.internet().emailAddress(),
+                faker.internet().password(6, 12),
+                faker.name().firstName()
         );
     }
 
     @Test
     public void createUniqueUser() {
-        Response response = userClient.createUser(randomUser());
-        response.then().statusCode(HttpStatus.SC_OK)
+        Response response = userClient.createUser(generateUser());
+
+        response.then()
+                .statusCode(HttpStatus.SC_OK)
                 .body("success", equalTo(true));
     }
 
     @Test
     public void createDuplicateUser() {
-        User user = randomUser();
+        User user = generateUser();
         userClient.createUser(user);
 
         Response response = userClient.createUser(user);
-        response.then().statusCode(HttpStatus.SC_FORBIDDEN);
+
+        response.then()
+                .statusCode(HttpStatus.SC_FORBIDDEN);
     }
 
     @Test
     public void createUserWithoutEmail() {
-        User user = new User(null, "123456", "Test");
+        User user = new User(
+                null,
+                faker.internet().password(6, 12),
+                faker.name().firstName()
+        );
 
         Response response = userClient.createUser(user);
-        response.then().statusCode(HttpStatus.SC_FORBIDDEN);
+
+        response.then()
+                .statusCode(HttpStatus.SC_FORBIDDEN);
     }
 }
